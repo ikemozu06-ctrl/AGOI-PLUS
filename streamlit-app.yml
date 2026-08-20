@@ -1,0 +1,55 @@
+name: Streamlit app checks
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Catches syntax errors in every file
+      - name: Compile all Python files
+        run: python -m compileall -q .
+
+      # Catches the exact bug that shipped: a helper used but never imported
+      - name: Check for undefined names (NameError guard)
+        run: |
+          pip install pyflakes
+          pyflakes streamlit_app.py _shared.py pages/*.py agoi/*.py agoi/**/*.py \
+            | grep -E "undefined name" && (echo "::error::Undefined name found" && exit 1) || echo "No undefined names"
+
+      # Boots the app and loads all 11 routes; fails if any returns an error
+      - name: Smoke test all routes
+        run: |
+          streamlit run streamlit_app.py --server.headless true --server.port 8501 &
+          sleep 30
+          FAIL=0
+          for route in "" Country_Profile Africa_Map Pillar_Comparison Scenario_Tool \
+                       Export_and_Methodology AfCFTA Corridor_Simulator \
+                       Natural_Capital Nigeria_States AGESI_Instruments; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8501/$route")
+            if [ "$CODE" != "200" ]; then
+              echo "::error::Route /$route returned $CODE"; FAIL=1
+            else
+              echo "OK /$route"
+            fi
+          done
+          exit $FAIL
