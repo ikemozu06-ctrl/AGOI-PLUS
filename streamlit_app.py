@@ -149,7 +149,7 @@ st.sidebar.markdown(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Hero — shows the logo beside the title if assets/logo.* exists, else the emoji.
+# Hero
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="agoi-hero">
@@ -158,8 +158,6 @@ st.markdown("""
   with full data provenance and confidence flags.</p>
 </div>
 """, unsafe_allow_html=True)
-else:
-    st.markdown(_HERO_TEXT.format(title="🌍 AGOI™ ESG Platform"), unsafe_allow_html=True)
 
 with st.spinner("Loading scores…"):
     scores, audit, meta = load_data(mode)
